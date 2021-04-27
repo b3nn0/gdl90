@@ -31,7 +31,7 @@ except ImportError:
 
 
 # Default values for options
-DEF_RECV_PORT=43211
+DEF_RECV_PORT=4000
 DEF_RECV_MAXSIZE=9000
 DEF_REPORT_COUNT=100
 
@@ -139,7 +139,7 @@ def _receive(options):
         packetTotal += 1
         if packetTotal % options.reportcount == 0:
             ts = _getTimeStamp()
-            print_error("[%s] %s packets received from %s" % (ts, packetTotal, sender))
+            #print_error("[%s] %s packets received from %s" % (ts, packetTotal, sender))
         
         decoder.addBytes(data)
 

@@ -71,6 +71,21 @@ def _parseTrafficReport(msgBytes):
     msg = namedtuple('TrafficReport', 'MsgType Status Type Address Latitude Longitude Altitude Misc NavIntegrityCat NavAccuracyCat HVelocity VVelocity TrackHeading EmitterCat CallSign Code')
     return msg._make(_parseMessageType10and20('TrafficReport', msgBytes))
 
+def _parseAHRS(msgBytes):
+    return _parseOther(msgBytes, 'AHRS')
+
+def _parseStratuxHearbeat(msgBytes):
+    return _parseOther(msgBytes, 'StratuxHeartbeat')
+
+def _parseFFID(msgBytes):
+    return _parseOther(msgBytes, 'ForeFlightID')
+
+def _parseOther(msgBytes, typestr):
+    msg = namedtuple(typestr, 'MsgType TypeCode Data')
+    fields = [typestr]
+    fields.append(msgBytes[0])
+    fields.append(msgBytes)
+    return msg._make(fields)
 
 def _parseMessageType10and20(msgType, msgBytes):
     """parse the fields for ownership and traffic reports"""
@@ -208,7 +223,9 @@ MessageIDMapping = {
     0x0a : _parseOwnershipReport,
     0x0b : _parseOwnershipGeometricAltitude,
     0x14 : _parseTrafficReport,
-    0x65 : _parseGpsTime,
+    0x4c : _parseAHRS,
+    0x53 : _parseStratuxHearbeat,
+    0x65 : _parseFFID,
 }
 
 
@@ -218,6 +235,6 @@ def messageToObject(data):
         return None
     msgId = data[0]
     if not msgId in MessageIDMapping.keys():
-        return None
+        return _parseOther(data, 'Other')
     msgObj = MessageIDMapping[msgId](data)
     return msgObj

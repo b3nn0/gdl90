@@ -125,7 +125,7 @@ class Decoder(object):
         
         raise Exception("_resynchronizeParser: unexpected reached end")
 
-    
+    prevTs = 0
     def _decodeMessage(self, escapedMessage):
         """decode one GDL90 message without the start/end markers"""
         
@@ -153,7 +153,7 @@ class Decoder(object):
         
         if not crcValid:
             self.stats['msgs'][msg[0]][1] += 1
-            #print "****BAD CRC****"
+            print "****BAD CRC****"
             return False
         self.stats['msgs'][msg[0]][0] += 1
         
@@ -176,7 +176,10 @@ class Decoder(object):
         if m.MsgType == 'Heartbeat':
             self.currtime += self.heartbeatInterval
             if self.format == 'normal':
-                print 'MSG00: s1=%02x, s2=%02x, ts=%02x' % (m.StatusByte1, m.StatusByte2, m.TimeStamp)
+                if self.prevTs is not None and self.prevTs == m.TimeStamp:
+                    print 'DUPLICATE TIMESTAMP!'
+                self.prevTs = m.TimeStamp
+                print 'MSG00: s1=%02x, s2=%02x, ts=%02x, count=%s' % (m.StatusByte1, m.StatusByte2, m.TimeStamp, str(m.MessageCounts))
             elif self.format == 'plotflight':
                 self.altitudeAge += 1
         
@@ -185,7 +188,7 @@ class Decoder(object):
                 if m.NavIntegrityCat == 0 or m.NavIntegrityCat == 1:  # unknown or <20nm, consider it invalid
                     pass
             elif self.format == 'normal':
-                print 'MSG10: %0.7f %0.7f %d %d %d' % (m.Latitude, m.Longitude, m.HVelocity, m.Altitude, m.TrackHeading)
+                print 'MSG10: %0.7f %0.7f Vh=%d Alt=%d Trk=%d Misc=%d Integrity=%d' % (m.Latitude, m.Longitude, m.HVelocity, m.Altitude, m.TrackHeading, m.Misc, m.NavIntegrityCat)
             elif self.format == 'plotflight':
                 if self.altitudeAge < self.altitudeMaxAge:
                     altitude = self.altitude
@@ -206,7 +209,7 @@ class Decoder(object):
                 self.altitudeAge = 0
         
         elif m.MsgType == 'TrafficReport':
-            if m.Latitude == 0.00 and m.Longitude == 0.00 and m.NavIntegrityCat == 0:  # no valid position
+            if m.Latitude == 0.00 and m.Longitude == 0.00 and m.NavIntegrityCat == 0 and False:  # no valid position
                 pass
             elif self.format == 'normal':
                 print 'MSG20: %0.7f %0.7f %d %d %d %d %s' % (m.Latitude, m.Longitude, m.HVelocity, m.VVelocity, m.Altitude, m.TrackHeading, m.CallSign)
@@ -227,6 +230,8 @@ class Decoder(object):
         
         elif m.MsgType == 'UplinkData' and self.uatOutput == True:
             messageUatToObject(m)
+        elif m is not None:
+            print('MSG' + str(m.TypeCode) + ' Other message: ' + m.MsgType)
         
         return True
     
