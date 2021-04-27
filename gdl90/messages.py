@@ -128,7 +128,7 @@ def _parseMessageType10and20(msgType, msgBytes):
     fields.append(msgBytes[18]) ;# emitter category
 
     # call sign; if blank, change to "-"
-    callsign = str(msgBytes[19:27]).rstrip()  # call sign
+    callsign = msgBytes[19:27].decode().rstrip()  # call sign
     if callsign == "": callsign ="-"
     fields.append(callsign)
 

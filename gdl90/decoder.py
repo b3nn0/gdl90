@@ -5,9 +5,9 @@
 import sys
 import datetime
 from collections import deque
-import messages
+from .messages import messageToObject
 from gdl90.fcs import crcCheck
-from messagesuat import messageUatToObject
+from .messagesuat import messageUatToObject
 
 
 class Decoder(object):
@@ -71,7 +71,7 @@ class Decoder(object):
             
             # Look to see if we have an ending 0x7e marker yet
             try:
-                i = self.inputBuffer.index(chr(0x7e), 1)
+                i = self.inputBuffer.index(0x7e, 1)
             except ValueError:
                 # no end marker found yet
                 #self._log("no end marker found; leaving parser for now")
@@ -153,7 +153,7 @@ class Decoder(object):
         
         if not crcValid:
             self.stats['msgs'][msg[0]][1] += 1
-            print "****BAD CRC****"
+            print ("****BAD CRC****")
             return False
         self.stats['msgs'][msg[0]][0] += 1
         
@@ -169,7 +169,7 @@ class Decoder(object):
                 print " " + hexstr
         """
         
-        m = messages.messageToObject(msg)
+        m = messageToObject(msg)
         if not m:
             return False
         
@@ -177,9 +177,9 @@ class Decoder(object):
             self.currtime += self.heartbeatInterval
             if self.format == 'normal':
                 if self.prevTs is not None and self.prevTs == m.TimeStamp:
-                    print 'DUPLICATE TIMESTAMP!'
+                    print('DUPLICATE TIMESTAMP!')
                 self.prevTs = m.TimeStamp
-                print 'MSG00: s1=%02x, s2=%02x, ts=%02x, count=%s' % (m.StatusByte1, m.StatusByte2, m.TimeStamp, str(m.MessageCounts))
+                print('MSG00: s1=%02x, s2=%02x, ts=%02x, count=%s' % (m.StatusByte1, m.StatusByte2, m.TimeStamp, str(m.MessageCounts)))
             elif self.format == 'plotflight':
                 self.altitudeAge += 1
         
@@ -188,7 +188,7 @@ class Decoder(object):
                 if m.NavIntegrityCat == 0 or m.NavIntegrityCat == 1:  # unknown or <20nm, consider it invalid
                     pass
             elif self.format == 'normal':
-                print 'MSG10: %0.7f %0.7f Vh=%d Alt=%d Trk=%d Misc=%d Integrity=%d' % (m.Latitude, m.Longitude, m.HVelocity, m.Altitude, m.TrackHeading, m.Misc, m.NavIntegrityCat)
+                print('MSG10: %0.7f %0.7f Vh=%d Alt=%d Trk=%d Misc=%d Integrity=%d' % (m.Latitude, m.Longitude, m.HVelocity, m.Altitude, m.TrackHeading, m.Misc, m.NavIntegrityCat))
             elif self.format == 'plotflight':
                 if self.altitudeAge < self.altitudeMaxAge:
                     altitude = self.altitude
@@ -199,11 +199,11 @@ class Decoder(object):
                 # Must have the GPS time from a message 101 before outputting anything
                 if not self.gpsTimeReceived:
                     return True
-                print '%02d:%02d:%02d %0.7f %0.7f %d %d %d' % (self.currtime.hour, self.currtime.minute, self.currtime.second, m.Latitude, m.Longitude, m.HVelocity, altitude, m.TrackHeading)
+                print('%02d:%02d:%02d %0.7f %0.7f %d %d %d' % (self.currtime.hour, self.currtime.minute, self.currtime.second, m.Latitude, m.Longitude, m.HVelocity, altitude, m.TrackHeading))
         
         elif m.MsgType == 'OwnershipGeometricAltitude':
             if self.format == 'normal':
-                print 'MSG11: %d %04xh' % (m.Altitude, m.VerticalMetrics)
+                print( 'MSG11: %d %04xh' % (m.Altitude, m.VerticalMetrics))
             elif self.format == 'plotflight':
                 self.altitude = m.Altitude
                 self.altitudeAge = 0
@@ -212,7 +212,7 @@ class Decoder(object):
             if m.Latitude == 0.00 and m.Longitude == 0.00 and m.NavIntegrityCat == 0 and False:  # no valid position
                 pass
             elif self.format == 'normal':
-                print 'MSG20: %0.7f %0.7f %d %d %d %d %s' % (m.Latitude, m.Longitude, m.HVelocity, m.VVelocity, m.Altitude, m.TrackHeading, m.CallSign)
+                print( 'MSG20: %0.7f %0.7f %d %d %d %d %s' % (m.Latitude, m.Longitude, m.HVelocity, m.VVelocity, m.Altitude, m.TrackHeading, m.CallSign))
         
         elif m.MsgType == 'GpsTime':
             if not self.gpsTimeReceived:
@@ -226,12 +226,15 @@ class Decoder(object):
                     self.currtime = datetime.datetime.combine(self.currtime, utcTime)
             
             if self.format == 'normal':
-                print 'MSG101: %02d:%02d UTC (waas = %s)' % (m.Hour, m.Minute, m.Waas)
+                print( 'MSG101: %02d:%02d UTC (waas = %s)' % (m.Hour, m.Minute, m.Waas))
         
         elif m.MsgType == 'UplinkData' and self.uatOutput == True:
             messageUatToObject(m)
         elif m is not None:
-            print('MSG' + str(m.TypeCode) + ' Other message: ' + m.MsgType)
+            try:
+                print('MSG' + str(m.TypeCode) + ' Other message: ' + m.MsgType)
+            except:
+                pass
         
         return True
     
@@ -243,13 +246,13 @@ class Decoder(object):
         foundEscapeChar = False
         while True:
             try:
-                i = msg.index(chr(escapeValue))
+                i = msg.index(escapeValue)
                 foundEscapeChar = True
                 msgNew.extend(msg[0:i]); # everything up to the escape character
                 
                 # this will throw an exception if nothing follows the escape
                 escapedValue = msg[i+1] ^ 0x20
-                msgNew.append(chr(escapedValue)); # escaped value
+                msgNew.append(escapedValue); # escaped value
                 del(msg[0:i+2]); # remove prefix bytes, escape, and escaped value
                 
             except (ValueError, IndexError):
